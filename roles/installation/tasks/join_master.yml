@@ -1,8 +1,4 @@
 ---
-  #- name: Wait 2 Minutes for RKE2 Master Server Node Ready
-  #  pause:
-  #    seconds: 120
-
   - name: Create RKE2 Directory
     file:
        path: "{{ confdir }}"

@@ -2,7 +2,7 @@
 confvar: "/var/lib/rancher/rke2/server"
 confdir: "/etc/rancher/rke2"
 conffile: "{{ confdir }}/config.yaml"
-clustername: "devops-mw.sabancidx.com.tr"
+clustername: "devops-mw.example.com"
 kubeconfig: "/etc/rancher/rke2/rke2.yaml"
 
 ##UI ENV
@@ -13,8 +13,8 @@ jetstack_repo: "https://charts.jetstack.io"
 cert_manager: "https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.crds.yaml"
 jetstack: "https://charts.jetstack.io"
 
-rancher_domain: "devops-mw.sabancidx.com.tr"
-rancher_password: "N3wc01!rk3!devops"
+rancher_domain: "devops-mw.example.com"
+rancher_password: "rancheruipassword01"
 rancher_ui_replica: 2
 
 # "latest" or vX.Y.Z+rke2rN (for example v1.24.8+rke2r1 )
