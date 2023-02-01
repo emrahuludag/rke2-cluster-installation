@@ -1,0 +1,96 @@
+---
+- hosts: master_firstnode
+  become: yes
+  tasks:
+    - name: Include vars
+      include_vars:
+        dir: vars
+   
+    - name: Install HELM v3
+      shell: 'sudo curl -sLk raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash'
+   
+    - name: Add Helm Repository
+      kubernetes.core.helm_repository:
+        name: rancher-stable
+        repo_url: "{{ helm_repo }}"
+    
+    - name: Add Jetstack Repository
+      kubernetes.core.helm_repository:
+        name: jetstack
+        repo_url: "{{ jetstack_repo }}"
+
+    - name: Download Cert-Manager manifest to the cluster.
+      ansible.builtin.get_url:
+       url: "{{ cert_manager }}"
+       dest: ~/cert-manager.yaml
+       mode: '0664'
+
+    - name: Apply Cert-Manager manifest to the cluster.
+      kubernetes.core.k8s:
+       state: present
+       src: ~/cert-manager.yaml
+       kubeconfig: "{{ kubeconfig }}"
+     
+    - name: Installing Cert-Manager
+      kubernetes.core.helm:
+          name: cert-manager
+          chart_ref: jetstack/cert-manager
+          release_namespace: cert-manager
+          #chart_version:  "{{ cert_version }}"
+          create_namespace: true
+          update_repo_cache: true 
+          disable_hook: true
+          wait_timeout: 30s
+          kubeconfig: "{{ kubeconfig }}"
+   
+    - name: Wait for the Cert-Manager pods to come up with status 'Running'
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: cert-manager
+        field_selectors:
+          - status.phase=Running
+        kubeconfig: "{{ kubeconfig }}"
+        wait: True
+    
+    - name: Wait for certmanager webhook to be ready
+      command: " kubectl -n cert-manager --kubeconfig {{ kubeconfig }} rollout status deploy/cert-manager-webhook"
+      changed_when: false
+    
+    - name: Wait 20 seconds for cert-manager to properly run
+      pause:
+        seconds: "20"
+   
+    - name: Installing Rancher UI
+      kubernetes.core.helm:
+       name: rancher
+       chart_ref: rancher-stable/rancher
+       release_namespace: cattle-system
+       create_namespace: true
+       update_repo_cache: true
+       kubeconfig: "{{ kubeconfig }}"
+       values:
+        replicas: "{{ rancher_ui_replica }}"
+        hostname: "{{ rancher_domain }}"
+        bootstrapPassword: "{{ rancher_password }}"
+       #wait_timeout: 40s
+       wait: True
+    
+    - name: Wait for Rancher Deployment to be ready
+      command: "kubectl -n cattle-system --kubeconfig {{ kubeconfig }} rollout status deploy/rancher"
+      changed_when: false
+
+    - name: Wait for Rancher to be ready
+      command: "curl -k --silent https://{{ rancher_domain }}/ping"
+      args:
+        warn: no
+      register: rancher_ready
+      until: rancher_ready.stdout.find("pong") != -1
+      retries: 24
+      delay: 10
+      changed_when: false
+      check_mode: no
+    
+    - debug: var=rancher_ready.stdout_lines 
+
+    - debug:
+        msg: "Rancher Domain : https://{{ rancher_domain }} \n Rancher Login Username: admin \n Rancher UI Password: {{ rancher_password }}"

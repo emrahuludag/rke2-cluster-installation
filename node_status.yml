@@ -1,0 +1,19 @@
+---
+- hosts: master_firstnode
+  become: yes
+  tasks:
+    - name: Include vars
+      include_vars:
+        dir: vars
+
+    - name: Wait for first node to be ready
+      shell: kubectl wait --for=condition=Ready nodes --all --timeout=600s
+      environment:
+        KUBECONFIG: "{{ kubeconfig }}"
+      register: nodes_ready
+
+    - debug: var=nodes_ready.stdout_lines    
+   
+
+
+ 

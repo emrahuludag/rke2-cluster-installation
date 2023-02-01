@@ -1,0 +1,24 @@
+---
+- hosts: allnode
+  become: yes
+  tasks:
+   - name: Set hostname
+     hostname:
+      name: "{{ inventory_hostname }}"
+     register: reboot_required
+
+   - when: reboot_required.changed
+     block:
+        - name: reboot the server if required
+          shell: sleep 3; reboot
+          ignore_errors: true
+          async: 1
+          poll: 0
+        - name: wait for server to come back after reboot
+          wait_for_connection:
+            timeout: 600
+            delay: 20
+          register: reboot_result
+        - name: reboot time
+          debug:
+            msg: "The system rebooted in {{ reboot_result.elapsed }} seconds."
